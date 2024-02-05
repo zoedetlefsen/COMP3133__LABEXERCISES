@@ -1,0 +1,75 @@
+const express = require('express');
+const router = express.Router();
+const Restaurant = require('../models/RestaurantSchema'); 
+
+//Get all restaurants
+router.get('/restaurants', async (req, res) => {
+    try {
+        const restaurants = await Restaurant.find({});
+        res.json(restaurants);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+// POST request to add a new restaurant
+router.post('/restaurants', async (req, res) => {
+    try {
+        const newRestaurant = new Restaurant(req.body); // Create a new restaurant with data from request body
+        const savedRestaurant = await newRestaurant.save(); // Save the restaurant to the database
+        res.status(201).json(savedRestaurant); // Send back the created restaurant
+    } catch (error) {
+        res.status(400).send(error); // Send a bad request error if something goes wrong
+    }
+});
+
+// DELETE request to remove a restaurant
+router.delete('/:id', async (req, res) => {
+    try {
+        const restaurantId = req.params.id;
+        const deletedRestaurant = await Restaurant.findByIdAndDelete(restaurantId);
+        
+        if (!deletedRestaurant) {
+            return res.status(404).send('Restaurant not found');
+        }
+
+        res.status(200).json({ message: 'Restaurant successfully deleted', deletedRestaurant });
+    } catch (error) {
+        res.status(500).send(error); // Internal server error
+    }
+});
+
+//Endpoint to return all restaurant details by cuisine
+router.get('/restaurants/cuisine/:cuisine', async (req, res) => {
+    try {
+        const cuisine = req.params.cuisine;
+        const restaurants = await Restaurant.find({ cuisine: cuisine });
+        res.json(restaurants);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+//Endpoint to return restaurants with sorting by restaurant_id
+router.get('/restaurants/sort', async (req, res) => {
+    const sortParam = req.query.sortBy === 'ASC' ? '-restaurant_id' : 'restaurant_id';
+    //const sortParam = req.query.sortBy === 'DESC' ? '-restaurant_id' : 'restaurant_id';
+    try {
+        const restaurants = await Restaurant.find({}, 'id cuisines name city restaurant_id').sort(sortParam);
+        res.json(restaurants);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+// Endpoint for restaurants with 'Delicatessen' cuisine not in 'Brooklyn'
+router.get('/restaurants/Delicatessen', async (req, res) => {
+    try {
+        const restaurants = await Restaurant.find({ cuisine: 'delicatessen', city: { $ne: 'Brooklyn' } }).sort('name').select('cuisines name city -_id');
+        res.json(restaurants);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+module.exports = router;
